@@ -6,155 +6,147 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>人臉辨識打卡系統</title>
-  
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  
   <style>
     :root { --bg: #121212; --card: #1e1e1e; --green: #38a169; --red: #e53e3e; }
     body { font-family: -apple-system, sans-serif; background: var(--bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    
-    .status-bar { padding: 15px; font-size: 14px; text-align: center; background: rgba(255,255,255,0.05); font-weight: bold; }
-
-    .video-wrap { position: relative; flex: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .status-msg { padding: 15px; font-size: 14px; text-align: center; background: rgba(255,255,255,0.05); font-weight: bold; }
+    .video-area { position: relative; flex: 1; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     video { width: 100%; height: 100%; object-fit: cover; }
     canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-
-    .controls { padding: 20px; background: var(--card); border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
-    .btn-group { display: flex; gap: 15px; margin-bottom: 10px; }
-    button { flex: 1; padding: 20px; border: none; border-radius: 12px; font-size: 20px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+    .action-panel { padding: 25px; background: var(--card); border-top-left-radius: 25px; border-top-right-radius: 25px; box-shadow: 0 -8px 20px rgba(0,0,0,0.5); }
+    .btn-row { display: flex; gap: 15px; margin-bottom: 10px; }
+    button { flex: 1; padding: 22px; border: none; border-radius: 15px; font-size: 22px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
     .btn-in { background: var(--green); }
     .btn-out { background: var(--red); }
-    .btn-in:active, .btn-out:active { transform: scale(0.95); opacity: 0.8; }
-    
-    #enroll-panel { display: none; margin-top: 15px; background: #2d3748; padding: 15px; border-radius: 10px; }
-    input { width: 65%; padding: 12px; border-radius: 8px; border: 1px solid #4a5568; background: #1a202c; color: white; font-size: 16px; }
-    
-    #msg { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(56, 161, 105, 0.95); padding: 25px 50px; border-radius: 50px; font-size: 24px; font-weight: bold; display: none; z-index: 100; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+    .btn-in:active, .btn-out:active { transform: scale(0.96); opacity: 0.8; }
+    #reg-section { display: none; margin-top: 15px; background: #2d3748; padding: 15px; border-radius: 12px; }
+    input { width: 60%; padding: 12px; border-radius: 8px; border: 1px solid #4a5568; background: #1a202c; color: white; font-size: 16px; margin-right: 5px; }
+    #toast-msg { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); background: rgba(56, 161, 105, 0.98); padding: 30px 60px; border-radius: 60px; font-size: 26px; font-weight: bold; display: none; z-index: 100; box-shadow: 0 12px 30px rgba(0,0,0,0.5); border: 2px solid white; }
   </style>
 </head>
 <body>
 
-  <div class="status-bar" id="st">⏳ AI 初始化中...</div>
+  <div class="status-msg" id="st">⏳ AI 加載中...</div>
 
-  <div class="video-wrap">
+  <div class="video-area">
     <video id="v" autoplay muted playsinline></video>
     <canvas id="c"></canvas>
-    <div id="msg">✅ 成功</div>
+    <div id="toast-msg">✅ 成功</div>
   </div>
 
-  <div class="controls">
-    <div id="hint" style="text-align:center; margin-bottom:15px; color:#a0aec0; font-weight:bold;">請選擇模式後對準鏡頭</div>
-    <div class="btn-group">
-      <button class="btn-in" id="inBtn" onclick="setMode('上班')">☀ 上班</button>
-      <button class="btn-out" id="outBtn" onclick="setMode('下班')">🌙 下班</button>
+  <div class="action-panel">
+    <div style="text-align:center; margin-bottom:15px; color:#a0aec0; font-weight:bold;">請選模式後對準鏡頭</div>
+    <div class="btn-row">
+      <button class="btn-in" id="btnIn" onclick="setMode('上班')">上班</button>
+      <button class="btn-out" id="btnOut" onclick="setMode('下班')">下班</button>
     </div>
     
     <div style="text-align: center; margin-top: 15px;">
-      <a href="javascript:void(0)" onclick="document.getElementById('enroll-panel').style.display='block'" style="color:#4a5568; font-size:12px; text-decoration:none;">管理員註冊模式</a>
-      <div id="enroll-panel">
-        <input type="text" id="nameInput" placeholder="員工姓名">
-        <button style="background:#4a5568; width:28%; padding:12px; font-size:14px;" onclick="enroll()">註冊</button>
+      <a href="javascript:void(0)" onclick="unlockAdmin()" style="color:#2d3748; font-size:12px; text-decoration:none;">管理員專區</a>
+      <div id="reg-section">
+        <input type="text" id="nameIn" placeholder="員工姓名">
+        <button style="background:#4a5568; width:30%; padding:12px; font-size:14px;" onclick="enroll()">註冊</button>
       </div>
     </div>
   </div>
 
   <script>
+    // --- 🛠️ 密碼設定區 ---
+    const ADMIN_PIN = "8888"; 
     const GAS_URL = "https://script.google.com/macros/s/AKfycby3WmrXU6FzylNlqxwzi5gz-feCojgMWHA1DOqgRT5d70CBA6LjnOiC5XlYedDv8KPt/exec";
     const MODEL_URL = "./";
-    const v = document.getElementById('v'), c = document.getElementById('c'), st = document.getElementById('st'), msg = document.getElementById('msg');
+    
+    const v = document.getElementById('v'), c = document.getElementById('c'), st = document.getElementById('st'), toast = document.getElementById('toast-msg');
     let matcher = null, currentMode = "", lastHit = "", lastTime = 0;
 
-    // 1. 初始化
     (async () => {
       try {
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
         await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-        
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         v.srcObject = stream;
-        
         const res = await fetch(GAS_URL);
         const db = await res.json();
         if (db.length > 0) {
           const labeled = db.map(r => new faceapi.LabeledFaceDescriptors(r[0], [new Float32Array(JSON.parse(r[2]))]));
           matcher = new faceapi.FaceMatcher(labeled, 0.5);
         }
-        
-        st.innerText = "✅ 系統就緒 (請先選上下班)";
+        st.innerText = "✅ 系統就緒";
         startLoop();
-      } catch (e) { st.innerText = "❌ 啟動失敗，請檢查相機權限"; }
+      } catch (e) { st.innerText = "❌ 初始化異常"; }
     })();
+
+    // 密碼解鎖邏輯
+    function unlockAdmin() {
+      const input = prompt("請輸入管理員密碼：");
+      if (input === ADMIN_PIN) {
+        document.getElementById('reg-section').style.display = 'block';
+        st.innerText = "🔓 管理員模式已開啟";
+      } else if (input !== null) {
+        alert("密碼錯誤！");
+      }
+    }
 
     function setMode(m) {
       currentMode = m;
-      st.innerText = "🔔 正在進行 [" + m + "] 辨識...";
-      document.getElementById('inBtn').style.opacity = (m === '上班' ? "1" : "0.2");
-      document.getElementById('outBtn').style.opacity = (m === '下班' ? "1" : "0.2");
+      st.innerText = "🔔 正在執行 [" + m + "] 辨識...";
+      document.getElementById('btnIn').style.opacity = (m === '上班' ? "1" : "0.2");
+      document.getElementById('btnOut').style.opacity = (m === '下班' ? "1" : "0.2");
     }
 
     function startLoop() {
       const size = { width: v.videoWidth, height: v.videoHeight };
       faceapi.matchDimensions(c, size);
-
       setInterval(async () => {
         if (!currentMode) return; 
-
         const detects = await faceapi.detectAllFaces(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptors();
         const resized = faceapi.resizeResults(detects, size);
         c.getContext('2d').clearRect(0,0,c.width,c.height);
-
         resized.forEach(d => {
           const match = matcher ? matcher.findBestMatch(d.descriptor) : { label: 'unknown' };
           const isOk = match.label !== 'unknown' && match.distance < 0.45;
-          
           new faceapi.draw.DrawBox(d.detection.box, { 
             label: isOk ? match.label : "辨識中...", 
             boxColor: isOk ? "#38a169" : "#e53e3e" 
           }).draw(c);
-
-          if (isOk) handleAttendance(match.label);
+          if (isOk) handleSuccess(match.label);
         });
       }, 600);
     }
 
-    async function handleAttendance(name) {
+    async function handleSuccess(name) {
       const now = Date.now();
       if (lastHit === name && now - lastTime < 10000) return; 
-
-      lastHit = name;
-      lastTime = now;
-      
-      msg.innerText = `✅ ${name} ${currentMode}成功`;
-      msg.style.display = "block";
+      lastHit = name; lastTime = now;
+      toast.innerText = `✅ ${name} /n ${currentMode}成功`;
+      toast.style.display = "block";
       window.speechSynthesis.speak(new SpeechSynthesisUtterance(`${name}${currentMode}成功`));
-
       const url = `${GAS_URL}?action=record&name=${encodeURIComponent(name)}&type=${encodeURIComponent(currentMode)}`;
-      fetch(url, { mode: 'no-cors' }); // 發送打卡紀錄
-
+      fetch(url, { mode: 'no-cors' }); 
       setTimeout(() => {
-        msg.style.display = "none";
+        toast.style.display = "none";
         currentMode = "";
-        st.innerText = "✅ 待命 (請選擇上班或下班)";
-        document.getElementById('inBtn').style.opacity = "1";
-        document.getElementById('outBtn').style.opacity = "1";
-      }, 3000);
+        st.innerText = "✅ 待命";
+        document.getElementById('btnIn').style.opacity = "1";
+        document.getElementById('btnOut').style.opacity = "1";
+      }, 3500);
     }
 
     async function enroll() {
-      const name = document.getElementById('nameInput').value;
-      if(!name) return alert("請輸入姓名");
+      const nameIn = document.getElementById('nameIn').value;
+      if(!nameIn) return alert("請輸入姓名");
       st.innerText = "🎯 擷取特徵中...";
       const res = await faceapi.detectSingleFace(v, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
       if(res) {
         const desc = encodeURIComponent(JSON.stringify(Array.from(res.descriptor)));
-        const url = `${GAS_URL}?action=enroll&name=${encodeURIComponent(name)}&descriptor=${desc}`;
-        
+        const url = `${GAS_URL}?action=enroll&name=${encodeURIComponent(nameIn)}&descriptor=${desc}`;
         fetch(url, { mode: 'no-cors' }).then(() => {
-          alert("註冊成功！系統將自動整理資料庫。");
+          alert("註冊成功！系統刷新中...");
           location.reload();
         });
-      } else { alert("沒抓到臉，請正對鏡頭"); }
+      } else { alert("辨識不到人臉"); }
     }
   </script>
 </body>
